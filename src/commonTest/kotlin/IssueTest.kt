@@ -1,6 +1,7 @@
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.elementDescriptors
 import kotlinx.serialization.descriptors.serialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
@@ -9,6 +10,7 @@ import kotlinx.serialization.encoding.encodeStructure
 import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class IssueTest {
     @Test
@@ -16,6 +18,14 @@ class IssueTest {
         val column = Column(String::class, listOf<String?>(null))
         Json.encodeToString(column)
     }
+
+    @Test
+    fun test2() {
+        val isNullable = listOfNullable<String>().descriptor.elementDescriptors.first().isNullable
+        assertTrue(isNullable)
+    }
+
+    inline fun <reified T> listOfNullable(): KSerializer<List<Any?>> = serializer<List<T?>>() as KSerializer<List<Any?>>
 }
 
 object ColumnSerializer : KSerializer<Column> {
@@ -25,15 +35,15 @@ object ColumnSerializer : KSerializer<Column> {
     }
 
     override fun serialize(encoder: Encoder, value: Column) {
+        val serializer = value.kClass.listSerializer
         encoder.encodeStructure(descriptor) {
             encodeStringElement(descriptor, 0, value.kClass.simpleName ?: error("?"))
-            encodeSerializableElement(descriptor, 1, value.kClass.listSerializer, value.payload)
+            encodeSerializableElement(descriptor, 1, serializer, value.payload)
         }
     }
 
     override fun deserialize(decoder: Decoder): Column = decoder.decodeStructure(descriptor) {
-        TODO()
-
+        error("no need to deserialize")
     }
 }
 
